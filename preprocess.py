@@ -2,7 +2,8 @@ import pandas as pd
 import os
 from datetime import datetime
 import numpy as np
-from numpy import vectorize
+
+data_path = './data/preprocessed'
 
 
 # Utils工具类
@@ -86,10 +87,67 @@ def StockReturnFrames():
                         on='date', how='outer').sort_values(by=['date'])
     # 个股收益率
     stockmnth = excel2Df("./data/raw/stockmnth")[['Stkcd', 'Trdmnt', 'Msmvosd', 'Mretwd', 'Markettype']]
-    stockmnth = stockmnth[np.isin(stockmnth['Markettype'], [1, 4])].rename(columns={'Trdmnt': 'date'})
-    pd.merge(stockmnth, marketRf, on='date').sort_values(by=['Stkcd', 'date']). \
+    stockmnth = stockmnth[np.isin(stockmnth['Markettype'], [1, 4])]. \
+        rename(columns={'Trdmnt': 'date'}).drop('Markettype', axis=1)
+    pd.merge(stockmnth, marketRf, on='date').sort_values(by=['Stkcd', 'date']).dropna(). \
         to_csv("data/preprocessed/stockReturns.csv", index=None)
 
 
+def extraFactors():
+    finance = pd.read_csv(os.path.join(data_path, 'finance.csv')).rename(columns={'Accper': "date"})
+    finance['date'] = finance['date'].str[:7]
+
+    stockReturns = pd.read_csv(os.path.join(data_path, 'stockReturns.csv'))
+
+    df = pd.merge(stockReturns, finance, on=['Stkcd', 'date'])
+    #   Size
+    Size = df.groupby(['Stkcd']).apply(lambda x: pd.DataFrame(
+        {
+            'phase': [2016, 2017],
+            'Size': [
+                x[x['date'] == '2016-06']['Msmvosd'].iat[0] if len(x[x['date'] == '2016-06']) > 0 else np.NAN,
+                x[x['date'] == '2017-06']['Msmvosd'].iat[0] if len(x[x['date'] == '2017-06']) > 0 else np.NAN
+            ]
+        }).dropna()).reset_index().drop(['level_1'], axis=1)
+    #   B/M ratio
+    BM = df.groupby(['Stkcd']).apply(lambda x: pd.DataFrame({
+        'phase': [2016, 2017],
+        'BM': [
+            x[x['date'] == '2015-12']['total_assets'].iat[0] / x[x['date'] == '2015-12']['Msmvosd'].iat[0]
+            if len(x[x['date'] == '2015-12']) > 0 else np.NAN,
+            x[x['date'] == '2016-12']['total_assets'].iat[0] / x[x['date'] == '2016-12']['Msmvosd'].iat[0]
+            if len(x[x['date'] == '2016-12']) > 0 else np.NAN
+        ]
+    }).dropna()).reset_index().drop(['level_1'], axis=1)
+
+    #   Inv
+    Inv = df.groupby(['Stkcd']).apply(lambda x: pd.DataFrame({
+        'phase': [2016, 2017],
+        'Inv': [
+            (x[x['date'] == '2015-12']['total_assets'].iat[0] - x[x['date'] == '2014-12']['total_assets'].iat[0])
+            / x[x['date'] == '2014-12']['total_assets'].iat[0]
+            if len(x[x['date'] == '2015-12']) > 0 and len(x[x['date'] == '2014-12']) > 0 else np.NAN,
+            (x[x['date'] == '2016-12']['total_assets'].iat[0] - x[x['date'] == '2015-12']['total_assets'].iat[0])
+            / x[x['date'] == '2015-12']['total_assets'].iat[0]
+            if len(x[x['date'] == '2016-12']) > 0 and len(x[x['date'] == '2015-12']) > 0 else np.NAN
+        ]
+    }).dropna()).reset_index().drop(['level_1'], axis=1)
+
+    #   OP
+
+    OP = df.groupby(['Stkcd']).apply(lambda x: pd.DataFrame({
+        'phase': [2016, 2017],
+        'OP': [
+            x[x['date'] == '2015-12']['operating profit'].iat[0] / x[x['date'] == '2015-12']['total_equity'].iat[0]
+            if len(x[x['date'] == '2015-12']) > 0 else np.NAN,
+            x[x['date'] == '2016-12']['operating profit'].iat[0] / x[x['date'] == '2016-12']['total_equity'].iat[0]
+            if len(x[x['date'] == '2016-12']) > 0 and len(x[x['date'] == '2016-12']) > 0 else np.NAN
+        ]
+    }).dropna()).reset_index().drop(['level_1'], axis=1)
+
+    pd.merge(pd.merge(BM, Inv), pd.merge(OP, Size), on=['Stkcd', 'phase']). \
+        to_csv(os.path.join(data_path, "SortCols.csv"), index=False)
+
+
 if __name__ == '__main__':
-    StockReturnFrames()
+    extraFactors()
