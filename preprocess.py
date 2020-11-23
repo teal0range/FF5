@@ -1,6 +1,6 @@
 import pandas as pd
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 import numpy as np
 
 data_path = './data/preprocessed'
@@ -14,6 +14,17 @@ def convertCode(code) -> str:
     :return: 6位标准代码
     """
     return "{:06d}".format(int(code))
+
+
+def generateDate(start, end) -> list:
+    start = datetime.strptime(start, "%Y-%m-%d")
+    end = datetime.strptime(end, "%Y-%m-%d")
+    current = start
+    res = []
+    while current < end:
+        res.append(current.strftime("%Y-%m"))
+        current = current.replace(day=28) + timedelta(days=4)
+    return res
 
 
 # IO 输入输出
@@ -150,4 +161,5 @@ def extraFactors():
 
 
 if __name__ == '__main__':
-    extraFactors()
+    # extraFactors()
+    pass
