@@ -112,7 +112,7 @@ def extraFactors():
 
     df = pd.merge(stockReturns, finance, on=['Stkcd', 'date'])
     #   Size
-    Size = df.groupby(['Stkcd']).apply(lambda x: pd.DataFrame(
+    Size = stockReturns.groupby(['Stkcd']).apply(lambda x: pd.DataFrame(
         {
             'phase': [2016, 2017],
             'Size': [
@@ -132,7 +132,7 @@ def extraFactors():
     }).dropna()).reset_index().drop(['level_1'], axis=1)
 
     #   Inv
-    Inv = df.groupby(['Stkcd']).apply(lambda x: pd.DataFrame({
+    Inv = finance.groupby(['Stkcd']).apply(lambda x: pd.DataFrame({
         'phase': [2016, 2017],
         'Inv': [
             (x[x['date'] == '2015-12']['total_assets'].iat[0] - x[x['date'] == '2014-12']['total_assets'].iat[0])

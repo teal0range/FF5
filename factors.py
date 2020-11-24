@@ -9,7 +9,7 @@ from preprocess import generateDate
 data_path = 'data/preprocessed'
 phase = {
     "2016": generateDate("2016-07-31", "2017-06-30"),
-    "2017": generateDate("2017-07-31", "2018-06-30")
+    "2017": generateDate("2017-07-31", "2018-01-31")
 }
 
 currentPhase = phase["2016"]
@@ -215,8 +215,8 @@ def FF5(t):
 
 
 if __name__ == '__main__':
-    # FF5(['2016', '2017'])
-    g = Grouping(2016)
-    g.append([('S', 0), ('B', 0.5)], 'Size')
-    g.append([('L', 0), ('N', 0.3), ('H', 0.7)], 'BM')
-    print(g['S', 'L'])
+    FF5(['2016', '2017'])
+    # g = Grouping(2016)
+    # g.append([('S', 0), ('B', 0.5)], 'Size')
+    # g.append([('L', 0), ('N', 0.3), ('H', 0.7)], 'BM')
+    # print(g['S', 'L'])
