@@ -124,9 +124,9 @@ def extraFactors():
     BM = df.groupby(['Stkcd']).apply(lambda x: pd.DataFrame({
         'phase': [2016, 2017],
         'BM': [
-            x[x['date'] == '2015-12']['total_assets'].iat[0] / x[x['date'] == '2015-12']['Msmvosd'].iat[0]
+            x[x['date'] == '2015-12']['total_equity'].iat[0] / x[x['date'] == '2015-12']['Msmvosd'].iat[0]
             if len(x[x['date'] == '2015-12']) > 0 else np.NAN,
-            x[x['date'] == '2016-12']['total_assets'].iat[0] / x[x['date'] == '2016-12']['Msmvosd'].iat[0]
+            x[x['date'] == '2016-12']['total_equity'].iat[0] / x[x['date'] == '2016-12']['Msmvosd'].iat[0]
             if len(x[x['date'] == '2016-12']) > 0 else np.NAN
         ]
     }).dropna()).reset_index().drop(['level_1'], axis=1)
@@ -161,5 +161,4 @@ def extraFactors():
 
 
 if __name__ == '__main__':
-    # extraFactors()
-    pass
+    extraFactors()
