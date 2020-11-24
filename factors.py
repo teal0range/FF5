@@ -17,7 +17,7 @@ currentPhase = phase["2016"]
 
 class Grouping:
     # 分组类
-    def __init__(self):
+    def __init__(self, t):
         """形如[[('h',df0),('l',df1)],[('b',df0),('s',df1)]]
         用于存储交集之前的数据
         """
@@ -30,8 +30,12 @@ class Grouping:
         """标记类有没有准备好被查询"""
         self.isPrepared = False
 
+        """区间"""
+        self.t = t
+
         """BM Inv OP Size"""
         self.factorList = pd.read_csv(os.path.join(data_path, 'SortCols.csv'))
+        self.factorList = self.factorList[self.factorList['phase'] == int(self.t)]
 
         """回报率文件"""
         self.stockReturn = self.date2Phase(
@@ -140,9 +144,9 @@ def Mktrf_MethodOne():
     return df[['date', 'Mktrf']]
 
 
-def SMB_MethodOne():
+def SMB_MethodOne(t):
     # SMB BM
-    g = Grouping()
+    g = Grouping(t)
     g.append([('S', 0), ('B', 0.5)], 'Size')
     g.append([('L', 0), ('N', 0.3), ('H', 0.7)], 'BM')
     SMB_BM = (g.getVMReturn(currentPhase, section=['S', 'L']) + g.getVMReturn(currentPhase, section=['S', 'N'])
@@ -150,7 +154,7 @@ def SMB_MethodOne():
              (g.getVMReturn(currentPhase, section=['B', 'L']) + g.getVMReturn(currentPhase, section=['B', 'N'])
               + g.getVMReturn(currentPhase, section=['B', 'H'])) / 3
 
-    g = Grouping()
+    g = Grouping(t)
     g.append([('S', 0), ('B', 0.5)], 'Size')
     g.append([('W', 0), ('N', 0.3), ('R', 0.7)], 'OP')
     SMB_OP = (g.getVMReturn(currentPhase, section=['S', 'W']) + g.getVMReturn(currentPhase, section=['S', 'N'])
@@ -158,7 +162,7 @@ def SMB_MethodOne():
              (g.getVMReturn(currentPhase, section=['B', 'W']) + g.getVMReturn(currentPhase, section=['B', 'N'])
               + g.getVMReturn(currentPhase, section=['B', 'R'])) / 3
 
-    g = Grouping()
+    g = Grouping(t)
     g.append([('S', 0), ('B', 0.5)], 'Size')
     g.append([('C', 0), ('N', 0.3), ('A', 0.7)], 'Inv')
     SMB_Inv = (g.getVMReturn(currentPhase, section=['S', 'C']) + g.getVMReturn(currentPhase, section=['S', 'N'])
@@ -169,18 +173,17 @@ def SMB_MethodOne():
     return pd.DataFrame({'date': currentPhase, 'SMB': (SMB_BM + SMB_OP + SMB_Inv) / 3})
 
 
-def HML_MethodOne():
-    g = Grouping()
+def HML_MethodOne(t):
+    g = Grouping(t)
     g.append([('S', 0), ('B', 0.5)], 'Size')
     g.append([('L', 0), ('N', 0.3), ('H', 0.7)], 'BM')
     HML = (g.getVMReturn(currentPhase, section=['S', 'H']) + g.getVMReturn(currentPhase, section=['B', 'H'])) / 2 - \
           (g.getVMReturn(currentPhase, section=['S', 'L']) + g.getVMReturn(currentPhase, section=['B', 'L'])) / 2
-
     return pd.DataFrame({'date': currentPhase, 'HML': HML})
 
 
-def RMW_MethodOne():
-    g = Grouping()
+def RMW_MethodOne(t):
+    g = Grouping(t)
     g.append([('S', 0), ('B', 0.5)], 'Size')
     g.append([('W', 0), ('N', 0.3), ('R', 0.7)], 'OP')
     RMW = (g.getVMReturn(currentPhase, section=['S', 'R']) + g.getVMReturn(currentPhase, section=['B', 'R'])) / 2 - \
@@ -189,8 +192,8 @@ def RMW_MethodOne():
     return pd.DataFrame({'date': currentPhase, 'RMW': RMW})
 
 
-def CMA_MethodOne():
-    g = Grouping()
+def CMA_MethodOne(t):
+    g = Grouping(t)
     g.append([('S', 0), ('B', 0.5)], 'Size')
     g.append([('C', 0), ('N', 0.3), ('A', 0.7)], 'Inv')
     CMA = (g.getVMReturn(currentPhase, section=['S', 'C']) + g.getVMReturn(currentPhase, section=['B', 'C'])) / 2 - \
@@ -200,16 +203,20 @@ def CMA_MethodOne():
 
 
 @vectorize
-def FF5(p):
+def FF5(t):
     global currentPhase
-    currentPhase = phase[p]
+    currentPhase = phase[t]
     res = pd.merge(Mktrf_MethodOne(),
-                   pd.merge(SMB_MethodOne(),
-                            pd.merge(HML_MethodOne(),
-                                     pd.merge(RMW_MethodOne(), CMA_MethodOne(), on=['date']), on=['date']),
+                   pd.merge(SMB_MethodOne(t),
+                            pd.merge(HML_MethodOne(t),
+                                     pd.merge(RMW_MethodOne(t), CMA_MethodOne(t), on=['date']), on=['date']),
                             on=['date']), on=['date'])
-    res.to_csv(p + "FF5.csv", index=False)
+    res.to_csv(t + "FF5.csv", index=False)
 
 
 if __name__ == '__main__':
-    FF5(['2016', '2017'])
+    # FF5(['2016', '2017'])
+    g = Grouping(2016)
+    g.append([('S', 0), ('B', 0.5)], 'Size')
+    g.append([('L', 0), ('N', 0.3), ('H', 0.7)], 'BM')
+    print(g['S', 'L'])
