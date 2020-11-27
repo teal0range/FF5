@@ -36,12 +36,14 @@ class Grouping:
         """BM Inv OP Size"""
         self.factorList = pd.read_csv(os.path.join(data_path, 'SortCols.csv'))
         self.factorList = self.factorList[self.factorList['phase'] == int(self.t)]
+        self.factorList['MktSize'] = self.factorList['Size']
 
         """回报率文件"""
         self.stockReturn = self.date2Phase(
             pd.read_csv(os.path.join(data_path, 'stockReturns.csv'))[['Stkcd', 'date', 'Mretwd', 'Msmvosd']]
         )
 
+        """向量化getVMReturn函数"""
         self.getVMReturn = np.vectorize(self.getVMReturn, excluded=['section'])
 
     def append(self, breakpoints, col_name):
@@ -64,7 +66,7 @@ class Grouping:
         :return: 形如[('h',df0),('l',df1)]
         """
         df = self.factorList
-        df = df[['Stkcd', 'phase', col_name]].sort_values(by=[col_name])
+        df = df[['Stkcd', 'phase', 'MktSize', col_name]].sort_values(by=[col_name])
         res = []
         for idx, _breakpoint in enumerate(breakpoints):
             upper = 1 if idx == len(breakpoints) - 1 else breakpoints[idx + 1][1]
@@ -103,7 +105,7 @@ class Grouping:
                 df = group[1]
             tmp = df
             if axis != 0:
-                df = pd.merge(df, group[1], on=['Stkcd', 'phase'])
+                df = pd.merge(df, group[1], on=['Stkcd', 'phase', 'MktSize'])
             cols[axis] = [group[0]]
             self.intersections(axis + 1, cols, df)
             cols.pop(axis)
@@ -123,7 +125,7 @@ class Grouping:
     def getVMReturn(self, date, section):
         df = self.__getitem__(section)
         df = df[df['date'] == date]
-        return np.sum(df['Mretwd'] * df['Msmvosd']) / np.sum(df['Msmvosd'])
+        return np.sum(df['Mretwd'] * df['MktSize']) / np.sum(df['MktSize'])
 
     @staticmethod
     def date2Phase(df):
@@ -216,7 +218,3 @@ def FF5(t):
 
 if __name__ == '__main__':
     FF5(['2016', '2017'])
-    # g = Grouping(2016)
-    # g.append([('S', 0), ('B', 0.5)], 'Size')
-    # g.append([('L', 0), ('N', 0.3), ('H', 0.7)], 'BM')
-    # print(g['S', 'L'])
