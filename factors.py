@@ -40,11 +40,12 @@ class Grouping:
 
         """回报率文件"""
         self.stockReturn = self.date2Phase(
-            pd.read_csv(os.path.join(data_path, 'stockReturns.csv'))[['Stkcd', 'date', 'Mretwd', 'Msmvosd']]
+            pd.read_csv(os.path.join(data_path, 'stockReturns.csv'))[['Stkcd', 'date', 'Mretwd', 'Msmvosd', 'Nrrmtdt']]
         )
 
         """向量化getVMReturn函数"""
         self.getVMReturn = np.vectorize(self.getVMReturn, excluded=['section'])
+        self.getVMExcessReturn = np.vectorize(self.getVMExcessReturn, excluded=['section'])
 
     def append(self, breakpoints, col_name):
         """
@@ -59,8 +60,7 @@ class Grouping:
 
     def split(self, breakpoints, col_name):
         """
-        根据数据列分割df
-        :param df: 添加维度的数据表
+        根据数据列分割factorList
         :param breakpoints: 断点，形如[('H',0),('L',0.5)],意味[0,0.5]分位点为H,[0.5,1]为L
         :param col_name: 数据列名
         :return: 形如[('h',df0),('l',df1)]
@@ -76,8 +76,8 @@ class Grouping:
 
     def prepare(self):
         """
-
-        :return:
+        准备类以备查询
+        :return:None
         """
         self.isPrepared = True
         self.intersections()
@@ -123,9 +123,26 @@ class Grouping:
         return res.iat[0, self.getAxis()].reset_index().drop(['index'], axis=1)
 
     def getVMReturn(self, date, section):
+        """
+        获取某分组的VM加权回报，此函数在类初始化时会被向量化
+        :param date: 时间 YYYY-MM-DD
+        :param section: 类别
+        :return:
+        """
         df = self.__getitem__(section)
         df = df[df['date'] == date]
         return np.sum(df['Mretwd'] * df['MktSize']) / np.sum(df['MktSize'])
+
+    def getVMExcessReturn(self, date, section):
+        """
+        获取某分组的VM加权回报，此函数在类初始化时会被向量化
+        :param date: 时间 YYYY-MM-DD
+        :param section: 类别
+        :return:
+        """
+        df = self.__getitem__(section)
+        df = df[df['date'] == date]
+        return np.sum((df['Mretwd'] - df['Nrrmtdt']) * df['MktSize']) / np.sum(df['MktSize'])
 
     @staticmethod
     def date2Phase(df):
@@ -206,6 +223,7 @@ def CMA_MethodOne(t):
 
 @vectorize
 def FF5(t):
+    # 输出t期FF5因子的列表
     global currentPhase
     currentPhase = phase[t]
     res = pd.merge(Mktrf_MethodOne(),
@@ -213,8 +231,50 @@ def FF5(t):
                             pd.merge(HML_MethodOne(t),
                                      pd.merge(RMW_MethodOne(t), CMA_MethodOne(t), on=['date']), on=['date']),
                             on=['date']), on=['date'])
-    res.to_csv(t + "FF5.csv", index=False)
+    res.to_csv(os.path.join("result", t + "FF5.csv"), index=False)
+
+
+def PortfolioExcessReturn(t, row_type, row_num, col_type='Size', col_num=5, csv=True):
+    """
+    指标分组计算组合
+    :param t: 期号
+    :param row_type: 行名
+    :param row_num: 行分裂数
+    :param col_type: 列名（默认Size）
+    :param col_num: 列分裂数（默认5）
+    :param csv: 是否输出csv
+    :return:
+    """
+    global currentPhase
+    currentPhase = phase[t]
+    g = Grouping(t)
+    g.append([(i, i * 1 / row_num) for i in range(row_num)], row_type)
+    g.append([(i, i * 1 / row_num) for i in range(col_num)], col_type)
+
+    @vectorize
+    def formatDataframe(row_count, col_count):
+        return pd.DataFrame({"date": currentPhase,
+                             "row_type": [row_type] * len(currentPhase),
+                             "row_count": [row_count + 1] * len(currentPhase),
+                             "col_type": [col_type] * len(currentPhase),
+                             "col_count": [col_count + 1] * len(currentPhase),
+                             "ExcessReturn": g.getVMExcessReturn(currentPhase, section=[row_count, col_count])}
+                            , index=[i for i in range(len(currentPhase))])
+
+    df = pd.DataFrame().append(
+        list(formatDataframe(np.arange(0, row_num * col_num, 1) % row_num,
+                             np.arange(0, row_num * col_num, 1) // col_num))
+    )
+    if csv:
+        df.to_csv(os.path.join("result", t + "_" + row_type + "_" + col_type + ".csv"), index=False)
+    return df
 
 
 if __name__ == '__main__':
     FF5(['2016', '2017'])
+    PortfolioExcessReturn('2016', 'OP', 5)
+    PortfolioExcessReturn('2017', 'OP', 5)
+    PortfolioExcessReturn('2016', 'Inv', 5)
+    PortfolioExcessReturn('2017', 'Inv', 5)
+    PortfolioExcessReturn('2016', 'BM', 5)
+    PortfolioExcessReturn('2017', 'BM', 5)
