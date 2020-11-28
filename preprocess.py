@@ -81,7 +81,7 @@ def FinanceFrames():
     balanceSheet = MainBoardFilter(dateFilter(balanceSheet, 'Accper'), 'Stkcd').drop(['Typrep'], axis=1)
     IncomeSheet = MainBoardFilter(dateFilter(IncomeSheet, 'Accper'), 'Stkcd').drop(['Typrep'], axis=1)
     pd.merge(balanceSheet, IncomeSheet, on=['Stkcd', 'Accper'], how='outer'). \
-        to_csv("./data/preprocessed/finance.csv", index=None)
+        to_csv("./data/preprocessed/finance.csv", index=False)
 
 
 def StockReturnFrames():
@@ -161,4 +161,6 @@ def extraFactors():
 
 
 if __name__ == '__main__':
+    FinanceFrames()
+    StockReturnFrames()
     extraFactors()

@@ -231,7 +231,7 @@ def FF5(t):
                             pd.merge(HML_MethodOne(t),
                                      pd.merge(RMW_MethodOne(t), CMA_MethodOne(t), on=['date']), on=['date']),
                             on=['date']), on=['date'])
-    res.to_csv(os.path.join("result", t + "FF5.csv"), index=False)
+    res.to_csv(os.path.join("factor_result", t + "FF5.csv"), index=False)
 
 
 def PortfolioExcessReturn(t, row_type, row_num, col_type='Size', col_num=5, csv=True):
@@ -249,7 +249,7 @@ def PortfolioExcessReturn(t, row_type, row_num, col_type='Size', col_num=5, csv=
     currentPhase = phase[t]
     g = Grouping(t)
     g.append([(i, i * 1 / row_num) for i in range(row_num)], row_type)
-    g.append([(i, i * 1 / row_num) for i in range(col_num)], col_type)
+    g.append([(i, i * 1 / col_num) for i in range(col_num)], col_type)
 
     @vectorize
     def formatDataframe(row_count, col_count):
@@ -263,10 +263,10 @@ def PortfolioExcessReturn(t, row_type, row_num, col_type='Size', col_num=5, csv=
 
     df = pd.DataFrame().append(
         list(formatDataframe(np.arange(0, row_num * col_num, 1) % row_num,
-                             np.arange(0, row_num * col_num, 1) // col_num))
+                             np.arange(0, row_num * col_num, 1) // row_num))
     )
     if csv:
-        df.to_csv(os.path.join("result", t + "_" + row_type + "_" + col_type + ".csv"), index=False)
+        df.to_csv(os.path.join("group_result", t + "_" + row_type + "_" + col_type + ".csv"), index=False)
     return df
 
 
